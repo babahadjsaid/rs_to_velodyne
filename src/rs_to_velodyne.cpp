@@ -1,75 +1,6 @@
-//#include "utility.h"
-#include <ros/ros.h>
+#include <utilities.hpp>
 
-#include <sensor_msgs/PointCloud2.h>
 
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-#include <pcl_conversions/pcl_conversions.h>
-
-std::string output_type;
-
-static int RING_ID_MAP_RUBY[] = {
-        3, 66, 33, 96, 11, 74, 41, 104, 19, 82, 49, 112, 27, 90, 57, 120,
-        35, 98, 1, 64, 43, 106, 9, 72, 51, 114, 17, 80, 59, 122, 25, 88,
-        67, 34, 97, 0, 75, 42, 105, 8, 83, 50, 113, 16, 91, 58, 121, 24,
-        99, 2, 65, 32, 107, 10, 73, 40, 115, 18, 81, 48, 123, 26, 89, 56,
-        7, 70, 37, 100, 15, 78, 45, 108, 23, 86, 53, 116, 31, 94, 61, 124,
-        39, 102, 5, 68, 47, 110, 13, 76, 55, 118, 21, 84, 63, 126, 29, 92,
-        71, 38, 101, 4, 79, 46, 109, 12, 87, 54, 117, 20, 95, 62, 125, 28,
-        103, 6, 69, 36, 111, 14, 77, 44, 119, 22, 85, 52, 127, 30, 93, 60
-};
-static int RING_ID_MAP_16[] = {
-        0, 1, 2, 3, 4, 5, 6, 7, 15, 14, 13, 12, 11, 10, 9, 8
-};
-
-// rslidar和velodyne的格式有微小的区别
-// rslidar的点云格式
-struct RsPointXYZIRT {
-    PCL_ADD_POINT4D;
-    uint8_t intensity;
-    uint16_t ring = 0;
-    double timestamp = 0;
-
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-} EIGEN_ALIGN16;
-POINT_CLOUD_REGISTER_POINT_STRUCT(RsPointXYZIRT,
-                                  (float, x, x)(float, y, y)(float, z, z)(uint8_t, intensity, intensity)
-                                          (uint16_t, ring, ring)(double, timestamp, timestamp))
-
-// velodyne的点云格式
-struct VelodynePointXYZIRT {
-    PCL_ADD_POINT4D
-
-    PCL_ADD_INTENSITY;
-    uint16_t ring;
-    float time;
-
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-} EIGEN_ALIGN16;
-
-POINT_CLOUD_REGISTER_POINT_STRUCT (VelodynePointXYZIRT,
-                                   (float, x, x)(float, y, y)(float, z, z)(float, intensity, intensity)
-                                           (uint16_t, ring, ring)(float, time, time)
-)
-
-struct VelodynePointXYZIR {
-    PCL_ADD_POINT4D
-
-    PCL_ADD_INTENSITY;
-    uint16_t ring;
-
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-} EIGEN_ALIGN16;
-
-POINT_CLOUD_REGISTER_POINT_STRUCT (VelodynePointXYZIR,
-                                   (float, x, x)(float, y, y)
-                                           (float, z, z)(float, intensity, intensity)
-                                           (uint16_t, ring, ring)
-)
-
-ros::Subscriber subRobosensePC;
-ros::Publisher pubRobosensePC;
 
 template<typename T>
 bool has_nan(T point) {
@@ -77,33 +8,32 @@ bool has_nan(T point) {
     // remove nan point, or the feature assocaion will crash, the surf point will containing nan points
     // pcl remove nan not work normally
     // ROS_ERROR("Containing nan point!");
-    if (pcl_isnan(point.x) || pcl_isnan(point.y) || pcl_isnan(point.z)) {
+    if (std::isnan(point.x) || std::isnan(point.y) || std::isnan(point.z)) {
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 template<typename T>
-void publish_points(T &new_pc, const sensor_msgs::PointCloud2 &old_msg) {
+void publish_points(T &new_pc, const sensor_msgs::msg::PointCloud2::SharedPtr old_msg) {
     // pc properties
     new_pc->is_dense = true;
 
     // publish
-    sensor_msgs::PointCloud2 pc_new_msg;
+    sensor_msgs::msg::PointCloud2 pc_new_msg;
     pcl::toROSMsg(*new_pc, pc_new_msg);
-    pc_new_msg.header = old_msg.header;
+    pc_new_msg.header = old_msg->header;
     pc_new_msg.header.frame_id = "velodyne";
-    pubRobosensePC.publish(pc_new_msg);
+    pubRobosensePC->publish(pc_new_msg);
 }
 
-void rsHandler_XYZI(sensor_msgs::PointCloud2 pc_msg) {
+void rsHandler_XYZI(sensor_msgs::msg::PointCloud2::SharedPtr pc_msg) {
     pcl::PointCloud<pcl::PointXYZI>::Ptr pc(new pcl::PointCloud<pcl::PointXYZI>());
     pcl::PointCloud<VelodynePointXYZIR>::Ptr pc_new(new pcl::PointCloud<VelodynePointXYZIR>());
-    pcl::fromROSMsg(pc_msg, *pc);
+    pcl::fromROSMsg(*pc_msg, *pc);
 
     // to new pointcloud
-    for (int point_id = 0; point_id < pc->points.size(); ++point_id) {
+    for (size_t point_id = 0; point_id < pc->points.size(); ++point_id) {
         if (has_nan(pc->points[point_id]))
             continue;
 
@@ -130,7 +60,7 @@ void handle_pc_msg(const typename pcl::PointCloud<T_in_p>::Ptr &pc_in,
                    const typename pcl::PointCloud<T_out_p>::Ptr &pc_out) {
 
     // to new pointcloud
-    for (int point_id = 0; point_id < pc_in->points.size(); ++point_id) {
+    for (size_t point_id = 0; point_id < pc_in->points.size(); ++point_id) {
         if (has_nan(pc_in->points[point_id]))
             continue;
         T_out_p new_point;
@@ -151,7 +81,7 @@ void add_ring(const typename pcl::PointCloud<T_in_p>::Ptr &pc_in,
               const typename pcl::PointCloud<T_out_p>::Ptr &pc_out) {
     // to new pointcloud
     int valid_point_id = 0;
-    for (int point_id = 0; point_id < pc_in->points.size(); ++point_id) {
+    for (size_t point_id = 0; point_id < pc_in->points.size(); ++point_id) {
         if (has_nan(pc_in->points[point_id]))
             continue;
         // 跳过nan点
@@ -164,7 +94,7 @@ void add_time(const typename pcl::PointCloud<T_in_p>::Ptr &pc_in,
               const typename pcl::PointCloud<T_out_p>::Ptr &pc_out) {
     // to new pointcloud
     int valid_point_id = 0;
-    for (int point_id = 0; point_id < pc_in->points.size(); ++point_id) {
+    for (size_t point_id = 0; point_id < pc_in->points.size(); ++point_id) {
         if (has_nan(pc_in->points[point_id]))
             continue;
         // 跳过nan点
@@ -172,9 +102,9 @@ void add_time(const typename pcl::PointCloud<T_in_p>::Ptr &pc_in,
     }
 }
 
-void rsHandler_XYZIRT(const sensor_msgs::PointCloud2 &pc_msg) {
+void rsHandler_XYZIRT(const sensor_msgs::msg::PointCloud2::SharedPtr pc_msg) {
     pcl::PointCloud<RsPointXYZIRT>::Ptr pc_in(new pcl::PointCloud<RsPointXYZIRT>());
-    pcl::fromROSMsg(pc_msg, *pc_in);
+    pcl::fromROSMsg(*pc_msg, *pc_in);
 
     if (output_type == "XYZIRT") {
         pcl::PointCloud<VelodynePointXYZIRT>::Ptr pc_out(new pcl::PointCloud<VelodynePointXYZIRT>());
@@ -195,29 +125,38 @@ void rsHandler_XYZIRT(const sensor_msgs::PointCloud2 &pc_msg) {
 }
 
 int main(int argc, char **argv) {
-    ros::init(argc, argv, "rs_converter");
-    ros::NodeHandle nh;
-    if (argc < 3) {
-        ROS_ERROR(
-                "Please specify input pointcloud type( XYZI or XYZIRT) and output pointcloud type(XYZI, XYZIR, XYZIRT)!!!");
-        exit(1);
-    } else {
-        // 输出点云类型
-        output_type = argv[2];
+    
+    rclcpp::init(argc, argv);
+     
+    auto nodeHandle = rclcpp::Node::make_shared("rs_converter");
+    
+    
+    // Declare parameters
+    
+    nodeHandle->declare_parameter<std::string>("output_type");
+    nodeHandle->declare_parameter<std::string>("input_type");
+    nodeHandle->declare_parameter<std::vector<int64_t>>("RING_ID_MAP_RUBY");
+    nodeHandle->declare_parameter<std::vector<int64_t>>("RING_ID_MAP_16");
+     // Retrieve parameters
+    output_type = nodeHandle->get_parameter("output_type").as_string();
+    input_type = nodeHandle->get_parameter("input_type").as_string();
 
-        if (std::strcmp("XYZI", argv[1]) == 0) {
-            subRobosensePC = nh.subscribe("/rslidar_points", 1, rsHandler_XYZI);
-        } else if (std::strcmp("XYZIRT", argv[1]) == 0) {
-            subRobosensePC = nh.subscribe("/rslidar_points", 1, rsHandler_XYZIRT);
-        } else {
-            ROS_ERROR(argv[1]);
-            ROS_ERROR("Unsupported input pointcloud type. Currently only support XYZI and XYZIRT.");
-            exit(1);
-        }
+    RING_ID_MAP_RUBY = nodeHandle->get_parameter("RING_ID_MAP_RUBY").as_integer_array();
+    RING_ID_MAP_16 = nodeHandle->get_parameter("RING_ID_MAP_16").as_integer_array();
+    
+    
+    RCLCPP_INFO(nodeHandle->get_logger(), "Output Type: %s", output_type.c_str());
+
+
+    if (std::strcmp("XYZI", input_type.c_str()) == 0) {
+        subRobosensePC = nodeHandle->create_subscription<sensor_msgs::msg::PointCloud2>("/rslidar_points", 1, rsHandler_XYZI);
+    } else if (std::strcmp("XYZIRT", input_type.c_str()) == 0) {
+        subRobosensePC = nodeHandle->create_subscription<sensor_msgs::msg::PointCloud2>("/rslidar_points", 1, rsHandler_XYZIRT);
     }
-    pubRobosensePC = nh.advertise<sensor_msgs::PointCloud2>("/velodyne_points", 1);
+    pubRobosensePC = nodeHandle->create_publisher<sensor_msgs::msg::PointCloud2>("/velodyne_points", 1);
 
-    ROS_INFO("Listening to /rslidar_points ......");
-    ros::spin();
+    RCLCPP_INFO(nodeHandle->get_logger(),"Listening to /rslidar_points ......");
+    rclcpp::spin(nodeHandle);
+    rclcpp::shutdown(); 
     return 0;
 }
