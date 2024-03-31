@@ -22,3 +22,8 @@ One of the changes made to this package is the addition of the configuration fil
 | `input_topic` | ROS topic for input point cloud data              | String  |
 | `output_topic`| ROS topic for output converted point cloud data   | String  |
 
+### 2. RUN
+To run the package, run the following command:
+```
+ros2 launch rs_to_velodyne rs_to_velodyne_launch.py
+```
