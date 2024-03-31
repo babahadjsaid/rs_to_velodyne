@@ -14,11 +14,11 @@ RS-16 and RS-Ruby LiDAR point cloud, More LiDAR model support is coming soon.
 
 ### 1. Config File
 One of the changes made to this package is the addition of the configuration file. To correctly configure this package, the following parameters should be set in the `rs_to_velodyne/config/param.yaml` file:
-
+```
                                         | Parameter     | Description                                       | Type    |
                                         |---------------|---------------------------------------------------|---------|
                                         | `output_type` | Type of output point cloud (e.g., XYZIRT )        | String  |
                                         | `input_type`  | Type of input point cloud (e.g., XYZI)            | String  |
                                         | `input_topic` | ROS topic for input point cloud data              | String  |
                                         | `output_topic`| ROS topic for output converted point cloud data   | String  |
-
+```
