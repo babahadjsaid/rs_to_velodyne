@@ -87,7 +87,7 @@ void add_ring(const typename pcl::PointCloud<T_in_p>::Ptr &pc_in,
         // 跳过nan点
         pc_out->points[valid_point_id++].ring = pc_in->points[point_id].ring;
     }
-}
+} 
 
 template<typename T_in_p, typename T_out_p>
 void add_time(const typename pcl::PointCloud<T_in_p>::Ptr &pc_in,
@@ -103,9 +103,12 @@ void add_time(const typename pcl::PointCloud<T_in_p>::Ptr &pc_in,
 }
 
 void rsHandler_XYZIRT(const sensor_msgs::msg::PointCloud2::SharedPtr pc_msg) {
-    pcl::PointCloud<RsPointXYZIRT>::Ptr pc_in(new pcl::PointCloud<RsPointXYZIRT>());
-    pcl::fromROSMsg(*pc_msg, *pc_in);
 
+    pcl::PointCloud<RsPointXYZIRT>::Ptr pc_in(new pcl::PointCloud<RsPointXYZIRT>());
+    
+
+    pcl::fromROSMsg(*pc_msg, *pc_in);
+  
     if (output_type == "XYZIRT") {
         pcl::PointCloud<VelodynePointXYZIRT>::Ptr pc_out(new pcl::PointCloud<VelodynePointXYZIRT>());
         handle_pc_msg<RsPointXYZIRT, VelodynePointXYZIRT>(pc_in, pc_out);
@@ -135,12 +138,15 @@ int main(int argc, char **argv) {
     
     nodeHandle->declare_parameter<std::string>("output_type");
     nodeHandle->declare_parameter<std::string>("input_type");
+    nodeHandle->declare_parameter<std::string>("output_topic");
+    nodeHandle->declare_parameter<std::string>("input_topic");
     nodeHandle->declare_parameter<std::vector<int64_t>>("RING_ID_MAP_RUBY");
     nodeHandle->declare_parameter<std::vector<int64_t>>("RING_ID_MAP_16");
      // Retrieve parameters
     output_type = nodeHandle->get_parameter("output_type").as_string();
     input_type = nodeHandle->get_parameter("input_type").as_string();
-
+    output_topic = nodeHandle->get_parameter("output_type").as_string();
+    input_topic = nodeHandle->get_parameter("input_type").as_string();
     RING_ID_MAP_RUBY = nodeHandle->get_parameter("RING_ID_MAP_RUBY").as_integer_array();
     RING_ID_MAP_16 = nodeHandle->get_parameter("RING_ID_MAP_16").as_integer_array();
     
@@ -149,13 +155,13 @@ int main(int argc, char **argv) {
 
 
     if (std::strcmp("XYZI", input_type.c_str()) == 0) {
-        subRobosensePC = nodeHandle->create_subscription<sensor_msgs::msg::PointCloud2>("/rslidar_points", 1, rsHandler_XYZI);
+        subRobosensePC = nodeHandle->create_subscription<sensor_msgs::msg::PointCloud2>(input_topic, 1, rsHandler_XYZI);
     } else if (std::strcmp("XYZIRT", input_type.c_str()) == 0) {
-        subRobosensePC = nodeHandle->create_subscription<sensor_msgs::msg::PointCloud2>("/rslidar_points", 1, rsHandler_XYZIRT);
+        subRobosensePC = nodeHandle->create_subscription<sensor_msgs::msg::PointCloud2>(input_topic, 1, rsHandler_XYZIRT);
     }
-    pubRobosensePC = nodeHandle->create_publisher<sensor_msgs::msg::PointCloud2>("/velodyne_points", 1);
+    pubRobosensePC = nodeHandle->create_publisher<sensor_msgs::msg::PointCloud2>(output_topic, 1);
 
-    RCLCPP_INFO(nodeHandle->get_logger(),"Listening to /rslidar_points ......");
+    RCLCPP_INFO_STREAM(nodeHandle->get_logger(),"Listening to "<<input_topic<<"......\n");
     rclcpp::spin(nodeHandle);
     rclcpp::shutdown(); 
     return 0;

@@ -6,7 +6,7 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 
-std::string output_type,input_type;
+std::string output_type,input_type,input_topic,output_topic;
 std::vector<int64_t> RING_ID_MAP_16, RING_ID_MAP_RUBY;
 rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr subRobosensePC;
 rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubRobosensePC;
@@ -14,7 +14,7 @@ rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubRobosensePC;
 
 struct RsPointXYZIRT {
     PCL_ADD_POINT4D;
-    uint8_t intensity;
+    float intensity;
     uint16_t ring = 0;
     double timestamp = 0;
 
@@ -23,7 +23,7 @@ struct RsPointXYZIRT {
 
 
 POINT_CLOUD_REGISTER_POINT_STRUCT(RsPointXYZIRT,
-                                  (float, x, x)(float, y, y)(float, z, z)(uint8_t, intensity, intensity)
+                                  (float, x, x)(float, y, y)(float, z, z)(float, intensity, intensity)
                                           (uint16_t, ring, ring)(double, timestamp, timestamp))
 
 // velodyne的点云格式
