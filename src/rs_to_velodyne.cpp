@@ -145,8 +145,8 @@ int main(int argc, char **argv) {
      // Retrieve parameters
     output_type = nodeHandle->get_parameter("output_type").as_string();
     input_type = nodeHandle->get_parameter("input_type").as_string();
-    output_topic = nodeHandle->get_parameter("output_type").as_string();
-    input_topic = nodeHandle->get_parameter("input_type").as_string();
+    output_topic = nodeHandle->get_parameter("output_topic").as_string();
+    input_topic = nodeHandle->get_parameter("input_topic").as_string();
     RING_ID_MAP_RUBY = nodeHandle->get_parameter("RING_ID_MAP_RUBY").as_integer_array();
     RING_ID_MAP_16 = nodeHandle->get_parameter("RING_ID_MAP_16").as_integer_array();
     
