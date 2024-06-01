@@ -2,7 +2,7 @@
   ros__parameters:
     output_type: "XYZIRT"
     input_type: "XYZIRT"
-    input_topic: "/rslidar_points"
+    input_topic: "/rsldar_points"
     output_topic: "/velodyne_points"
     RING_ID_MAP_RUBY: [3, 66, 33, 96, 11, 74, 41, 104, 19, 82, 49, 112, 27, 90, 57, 120,
                       35, 98, 1, 64, 43, 106, 9, 72, 51, 114, 17, 80, 59, 122, 25, 88,
